@@ -63,7 +63,7 @@ public final class LedgerClientTest implements FabricClientGameTest {
             } catch (java.io.IOException error) { throw new AssertionError("Saved settings", error); }
         });
         checkCollectorAndCatches(context, owner);
-        System.out.println("PASS: standalone startup, collector item/lore import, upward/downward refresh, idempotence, chat counter, displayed totals, immediate save/reload, profile isolation, cached parsing, preview and layout controls");
+        System.out.println("PASS: standalone startup, collector item/lore import, upward/downward refresh, idempotence, chat counter, displayed totals, immediate save/reload, profile isolation, cached parsing, preview, layout and completed-tier controls");
     }
     private static void checkCollectorAndCatches(ClientGameTestContext context, LotusLedgerClient owner) {
         try (var world = context.worldBuilder().create()) {
@@ -131,7 +131,65 @@ public final class LedgerClientTest implements FabricClientGameTest {
                 owner.save();
                 mc.gui.setScreen(null);
             });
+            checkCompletedTierSetting(context, owner);
         } catch (Exception error) { throw new AssertionError("Collector-to-chat-to-save production checks", error); }
+    }
+    private static void checkCompletedTierSetting(ClientGameTestContext context, LotusLedgerClient owner) throws java.io.IOException {
+        context.runOnClient(mc -> {
+            for (Frog frog : Frog.values()) if (owner.progress().missing(frog, Tier.BRONZE))
+                owner.progress().record(new GameText.Catch(frog, Tier.BRONZE));
+            long total = owner.progress().totalCatches();
+            owner.changed();
+            require(owner.view().view().visibleTiers().contains(Tier.BRONZE), "Completed Bronze is visible by default");
+            mc.gui.setScreen(new LedgerScreen(owner, false));
+            toggleCompleted(mc);
+            require(owner.data.settings.hideCompletedTiers, "Actual hide-completed button enables the option");
+            require(owner.view().view().visibleTiers().equals(List.of(Tier.SILVER, Tier.GOLD, Tier.DIAMOND)), "Only completed Bronze disappears");
+            toggleCompleted(mc);
+            require(owner.view().view().visibleTiers().contains(Tier.BRONZE), "Disabling the option restores Bronze");
+            toggleCompleted(mc);
+            require(owner.progress().totalCatches() == total, "Toggling preserves all catch counts");
+        });
+        context.waitTicks(3);
+        context.takeScreenshot("lotus-ledger-completed-tiers");
+        context.getInput().resizeWindow(960, 720);
+        context.runOnClient(mc -> {
+            mc.options.guiScale().set(3);
+            mc.gui.setScreen(new LedgerScreen(owner, false));
+        });
+        context.waitTicks(3);
+        context.runOnClient(mc -> {
+            var screen = mc.gui.screen();
+            require(screen.height == 240, "Compact settings are checked at GUI height 240");
+            for (var child : screen.children()) if (child instanceof Button button)
+                require(button.getY() + button.getHeight() <= screen.height, "Every settings button fits the compact viewport");
+            screen.onClose();
+            var saved = new LedgerStore(FabricLoader.getInstance().getConfigDir().resolve("lotus-ledger.json")).load();
+            require(saved.settings.hideCompletedTiers, "Hide-completed option survives actual config reload");
+            var corrected = collector(mc, 5, 0);
+            mc.gui.setScreen(corrected);
+            owner.synchronizeMenu(corrected); owner.synchronizeMenu(corrected);
+            require(owner.view().view().visibleTiers().contains(Tier.BRONZE), "A collector correction automatically restores the Bronze column");
+            // Render the all-complete edge case as well: no tier columns, species totals still shown.
+            for (Frog frog : Frog.values()) for (Tier tier : Tier.values())
+                if (owner.progress().missing(frog, tier)) owner.progress().record(new GameText.Catch(frog, tier));
+            owner.changed();
+            require(owner.view().view().visibleTiers().isEmpty(), "All four completed tiers can hide together");
+        });
+        context.getInput().resizeWindow(1280, 720);
+        context.runOnClient(mc -> {
+            mc.options.guiScale().set(2);
+            mc.gui.setScreen(new LedgerScreen(owner, false));
+        });
+        context.waitTicks(3);
+        context.takeScreenshot("lotus-ledger-all-tiers-completed");
+        context.runOnClient(mc -> { owner.save(); mc.gui.setScreen(null); });
+    }
+    private static void toggleCompleted(net.minecraft.client.Minecraft mc) {
+        var screen = (LedgerScreen) mc.gui.screen();
+        Button button = screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+            .filter(value -> value.getMessage().getString().startsWith("Hide completed tiers:")).findFirst().orElseThrow();
+        screen.mouseClicked(new MouseButtonEvent(button.getX() + 2, button.getY() + 2, new MouseButtonInfo(0, 0)), false);
     }
     private static ContainerScreen collector(net.minecraft.client.Minecraft mc, int windowId, long commonBronze) {
         var container = new SimpleContainer(54);
@@ -160,3 +218,4 @@ public final class LedgerClientTest implements FabricClientGameTest {
     }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
 }
+

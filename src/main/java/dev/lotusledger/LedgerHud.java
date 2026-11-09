@@ -10,10 +10,10 @@ import java.util.List;
 public final class LedgerHud {
     public static final int WIDTH = 286;
     private static final int TOTAL_X = 111;
-    private static final int[] COLUMNS = {148, 184, 220, 256};
     private static final Component TITLE = CozyUi.label("Lotus Ledger");
     private static final Component FROG = CozyUi.label("Frog");
     private static final Component TOTAL = CozyUi.label("Total");
+    private static final Component COMPLETE = CozyUi.label("All tiers collected");
     private static final List<Component> HEADERS = java.util.Arrays.stream(Tier.values()).map(tier -> CozyUi.label(tier.label())).toList();
     private LedgerHud() {}
     public record Bounds(int x, int y, int width, int height, float scale) {
@@ -41,15 +41,20 @@ public final class LedgerHud {
         gfx.pose().pushMatrix();
         gfx.pose().translate(bounds.x, bounds.y);
         gfx.pose().scale(bounds.scale, bounds.scale);
-        CozyUi.round(gfx, 1, 2, WIDTH, height, 0x42000000);
-        CozyUi.round(gfx, 0, 0, WIDTH, height, 0xed17251f);
+        CozyUi.round(gfx, 1, 2, WIDTH, height, 0x18000000);
+        CozyUi.round(gfx, 0, 0, WIDTH, height, 0x7017251f);
         CozyUi.round(gfx, 10, 11, 3, 11, 0xff91b69a);
         CozyUi.text(gfx, TITLE, 19, 10, 0xffe5efda);
         CozyUi.text(gfx, text.summary, WIDTH - 12 - mc.font.width(text.summary), 11, 0xffadc4ae);
         CozyUi.text(gfx, text.subtitle, 11, 26, 0xff9fb39e);
         CozyUi.text(gfx, FROG, 11, 44, 0xffb9c7b0);
         centered(gfx, mc, TOTAL, TOTAL_X, 44, 0xffc9b8d5);
-        for (Tier tier : Tier.values()) centered(gfx, mc, HEADERS.get(tier.ordinal()), COLUMNS[tier.ordinal()], 44, tier.color);
+        var tiers = text.view.visibleTiers();
+        if (tiers.isEmpty()) centered(gfx, mc, COMPLETE, 202, 44, 0xffbbefae);
+        for (int column = 0; column < tiers.size(); column++) {
+            Tier tier = tiers.get(column);
+            centered(gfx, mc, HEADERS.get(tier.ordinal()), columnX(column, tiers.size()), 44, tier.color);
+        }
         gfx.fill(10, 57, WIDTH - 10, 58, 0xff334639);
         int y = 63;
         for (int index = 0; index < text.rows.size(); index++) {
@@ -57,10 +62,11 @@ public final class LedgerHud {
             if (index % 2 == 0) gfx.fill(7, y - 2, WIDTH - 7, y + 11, 0x182b4834);
             CozyUi.text(gfx, row.name, 11, y, row.source.highlighted() ? 0xffbbefae : 0xffdedfce);
             centered(gfx, mc, row.total, TOTAL_X, y, 0xffc9b8d5);
-            for (Tier tier : Tier.values()) {
+            for (int column = 0; column < tiers.size(); column++) {
+                Tier tier = tiers.get(column);
                 int i = tier.ordinal();
                 int color = row.source.collected().get(i) ? row.source.highlighted() ? 0xffbbefae : tier.color : 0xff829780;
-                centered(gfx, mc, row.cells.get(i), COLUMNS[i], y, color);
+                centered(gfx, mc, row.cells.get(i), columnX(column, tiers.size()), y, color);
             }
             y += 13;
         }
@@ -70,7 +76,9 @@ public final class LedgerHud {
         CozyUi.text(gfx, text.second, 11, y + 20, 0xff8eaa8e);
         gfx.pose().popMatrix();
     }
+    private static int columnX(int column, int count) { return 130 + (2 * column + 1) * 144 / (2 * count); }
     private static void centered(GuiGraphicsExtractor gfx, Minecraft mc, Component text, int x, int y, int color) {
         CozyUi.text(gfx, text, x - mc.font.width(text) / 2, y, color);
     }
 }
+

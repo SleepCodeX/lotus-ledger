@@ -7,13 +7,17 @@ import java.util.Locale;
 import java.util.Set;
 
 /** Immutable display text, rebuilt only when data/options change, never once per rendered frame. */
-public record HudView(List<Row> rows, String summary, String subtitle, String lineOne, String lineTwo, String emptyLine) {
+public record HudView(List<Row> rows, List<Tier> visibleTiers, String summary, String subtitle, String lineOne, String lineTwo, String emptyLine) {
     public record Row(Frog frog, String total, List<String> cells, List<Boolean> collected, boolean highlighted) {}
-    public HudView { rows = List.copyOf(rows); }
+    public HudView { rows = List.copyOf(rows); visibleTiers = List.copyOf(visibleTiers); }
     public int height() { return 64 + Math.max(1, rows.size()) * 13 + 35; }
     public static HudView build(LedgerData.Settings settings, LedgerData.Progress progress, String profile,
                                Set<Frog> highlights, boolean preview, MenuSynchronizer.Result sync) {
         List<Row> rows = new ArrayList<>(12);
+        List<Tier> visibleTiers = new ArrayList<>(4);
+        for (Tier tier : Tier.values()) {
+            if (!settings.hideCompletedTiers || progress == null || !progress.isTierComplete(tier)) visibleTiers.add(tier);
+        }
         for (Frog frog : Frog.values()) {
             if (settings.missingTier >= 0 && progress != null && !progress.missing(frog, Tier.values()[settings.missingTier])) continue;
             var entry = progress == null ? null : progress.get(frog);
@@ -58,7 +62,7 @@ public record HudView(List<Row> rows, String summary, String subtitle, String li
         }
         String empty = settings.missingTier < 0 ? "Your collection will appear here." : "All " + Tier.values()[settings.missingTier].label() + " tiers collected!";
         String tierSummary = initialized == 12 ? Integer.toString(tiers) : tiers > 0 ? "≥" + tiers : "?";
-        return new HudView(rows, tierSummary + " / 48 tiers", subtitle, first, second, empty);
+        return new HudView(rows, visibleTiers, tierSummary + " / 48 tiers", subtitle, first, second, empty);
     }
     static String count(long value, boolean exact, boolean collected) {
         if (!exact && value == 0) return collected ? "✔" : "?";
@@ -72,3 +76,4 @@ public record HudView(List<Row> rows, String summary, String subtitle, String li
         return String.format(Locale.ROOT, "%.1f", value / (double) divisor).replace(".0", "") + suffix;
     }
 }
+

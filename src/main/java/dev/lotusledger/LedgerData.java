@@ -11,6 +11,7 @@ public final class LedgerData {
     public static final class Settings {
         public boolean visible = true;
         public boolean counts = false;
+        public boolean hideCompletedTiers = false;
         public int missingTier = -1;
         public int x = 18, y = 60;
         public float scale = 1;
@@ -83,6 +84,11 @@ public final class LedgerData {
             return entry == null || !entry.has(tier);
         }
 
+        public boolean isTierComplete(Tier tier) {
+            for (Frog frog : Frog.values()) if (missing(frog, tier)) return false;
+            return true;
+        }
+
         public int discovered() {
             int total = 0;
             for (FrogProgress entry : frogs.values()) for (Tier tier : Tier.values()) if (entry.has(tier)) total++;
@@ -120,3 +126,4 @@ public final class LedgerData {
         }
     }
 }
+

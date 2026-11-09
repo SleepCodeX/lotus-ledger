@@ -39,33 +39,37 @@ public final class LedgerScreen extends Screen {
     @Override protected void init() {
         var settings = owner.data.settings;
         int x = Math.max(6, width - 180), y = 43;
+        int step = height < 270 ? 24 : 27;
         addRenderableWidget(new CozyButton(x, y, 168, settings.visible ? "Overlay: Visible" : "Overlay: Hidden", button -> {
             settings.visible = !settings.visible; changed();
         }));
-        addRenderableWidget(new CozyButton(x, y += 27, 168, settings.counts ? "View: Counts" : "View: Checkmarks", button -> {
+        addRenderableWidget(new CozyButton(x, y += step, 168, settings.counts ? "View: Counts" : "View: Checkmarks", button -> {
             settings.counts = !settings.counts; changed();
         }));
         String filter = settings.missingTier < 0 ? "Missing: Show all" : "Missing: " + Tier.values()[settings.missingTier].label();
-        addRenderableWidget(new CozyButton(x, y += 27, 168, filter, button -> {
+        addRenderableWidget(new CozyButton(x, y += step, 168, filter, button -> {
             settings.missingTier = settings.missingTier == 3 ? -1 : settings.missingTier + 1; changed();
         }));
-        addRenderableWidget(new CozyButton(x, y += 27, 80, "Smaller", button -> {
+        addRenderableWidget(new CozyButton(x, y += step, 168, "Hide completed tiers: " + (settings.hideCompletedTiers ? "On" : "Off"), button -> {
+            settings.hideCompletedTiers = !settings.hideCompletedTiers; changed();
+        }));
+        addRenderableWidget(new CozyButton(x, y += step, 80, "Smaller", button -> {
             settings.scale = Math.max(.6f, settings.scale - .1f); changed();
         }));
         addRenderableWidget(new CozyButton(x + 88, y, 80, "Larger", button -> {
             settings.scale = Math.min(2f, settings.scale + .1f); changed();
         }));
-        addRenderableWidget(new CozyButton(x, y += 27, 168, "Reset layout", button -> {
+        addRenderableWidget(new CozyButton(x, y += step, 168, "Reset layout", button -> {
             settings.x = 18; settings.y = 60; settings.scale = 1; changed();
         }));
-        addRenderableWidget(new CozyButton(x, y += 27, 168, preview ? "Show my collection" : "Preview sample", button -> {
+        addRenderableWidget(new CozyButton(x, y += step, 168, preview ? "Show my collection" : "Preview sample", button -> {
             Minecraft.getInstance().gui.setScreen(new LedgerScreen(owner, !preview));
         }));
-        addRenderableWidget(new CozyButton(x, y + 32, 168, "Done", button -> onClose()));
+        addRenderableWidget(new CozyButton(x, y + (height < 270 ? 24 : 32), 168, "Done", button -> onClose()));
     }
     private void changed() { owner.changed(); rebuildWidgets(); }
     @Override public void extractRenderState(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float delta) {
-        gfx.fill(0, 0, width, height, 0xcc101a16);
+        gfx.fill(0, 0, width, height, 0x66101a16);
         CozyUi.text(gfx, HEADING, 14, 10, 0xffe4edda);
         CozyUi.text(gfx, HINT, 14, 26, 0xff9eb59a);
         CozyUi.text(gfx, SETTINGS, Math.max(6, width - 180), 22, 0xffbfd1b8);
@@ -94,3 +98,4 @@ public final class LedgerScreen extends Screen {
     @Override public void onClose() { owner.save(); Minecraft.getInstance().gui.setScreen(null); }
     @Override public boolean isPauseScreen() { return false; }
 }
+

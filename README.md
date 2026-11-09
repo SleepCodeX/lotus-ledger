@@ -2,14 +2,14 @@
 
 A standalone Trophy Frog collection overlay for **Hypixel SkyBlock's Lotus Atoll**.
 
-**[Download 1.1.0](https://github.com/SleepCodeX/lotus-ledger/releases/tag/1.1.0) · Minecraft 26.2 · Fabric Loader 0.19.5+ · Java 25**
+**[Download 1.2.0](https://github.com/SleepCodeX/lotus-ledger/releases/tag/1.2.0) · Minecraft 26.2 · Fabric Loader 0.19.5+ · Java 25**
 
 ![The actual Minecraft settings screen, using sample collection data](docs/media/preview.png)
 
 ## Install and get started
 
 1. Use Minecraft **26.2**, Java **25**, Fabric Loader **0.19.5+**, and **Fabric API 0.161.0+26.2** or a newer build for Minecraft 26.2.
-2. Put **lotus-ledger-1.1.0.jar** in your instance's **mods** folder. Remove older **Lotus Ledger** jars.
+2. Put **lotus-ledger-1.2.0.jar** in your instance's **mods** folder. Remove older **Lotus Ledger** jars.
 3. Join Hypixel SkyBlock. Enable **Profile** and **Area** in **/widget**, and enable Player List Info if it is hidden.
 4. Visit **Researcher Ribery** on Lotus Atoll and open **Trophy Frogs**. Give the menu a moment to load your collection.
 5. Fish normally. Incoming trophy frog catch messages immediately update the HUD and saved progress.
@@ -18,7 +18,7 @@ A standalone Trophy Frog collection overlay for **Hypixel SkyBlock's Lotus Atoll
 
 ## Your collection, at a glance
 
-All **12 species × four tiers** appear in a compact movable table. The rounded type, calm colors and spacing keep it readable in game.
+By default, all **12 species × four tiers** appear in a compact movable table. A see-through background at 44% opacity, a soft shadow and rounded type keep the world visible behind the card.
 
 - **Top right:** collected tier combinations out of **48**.
 - **Total column:** catches of that species across all four tiers.
@@ -27,6 +27,14 @@ All **12 species × four tiers** appear in a compact movable table. The rounded 
 - New catches highlight the matching row for five seconds.
 
 **/lotusledger** opens the layout and settings editor. Drag the card to move it. Switch views, filter a missing tier, adjust scale, or reset the layout. **/lotusledger toggle** hides the HUD while tracking continues. **/lotusledger preview** shows sample data separately from your real collection.
+
+## Hide completed tiers
+
+![Completed Bronze hidden in the actual Minecraft settings screen](docs/media/completed-tiers.png)
+
+Open **/lotusledger** and turn **Hide completed tiers** on. A column disappears once all 12 species are collected in that tier. For example, collecting every Bronze frog hides Bronze while Silver, Gold and Diamond remain visible.
+
+The option starts off and is saved between sessions. Hidden tiers still count toward species totals, the grand total and collection progress. Completion uses the entire current profile, even when the missing-tier row filter is active. Unknown tiers stay visible. A later collector-menu correction can bring a tier back. Turning the option off restores all columns. If all four tiers are complete, the card shows **All tiers collected** and keeps species totals.
 
 ## Menu sync, every time
 
@@ -52,8 +60,9 @@ Menu scanning runs only while the relevant menu is open, four times per second. 
 
 ## Build and validation
 
-Use JDK 25 and run **./gradlew build**. The installable jar is **build/libs/lotus-ledger-1.1.0.jar**. The font asset is already bundled; normal builds do not need Python.
+Use JDK 25 and run **./gradlew build**. The installable jar is **build/libs/lotus-ledger-1.2.0.jar**. The font asset is already bundled; normal builds do not need Python.
 
 The release contains the exact jar that passed the local build, logic, persistence and real Minecraft client checks. GitHub also verifies the source in an independent build and offline client job. The preview above was captured in that offline client with controlled sample data, not a live Hypixel session.
 
 See [VALIDATION.md](VALIDATION.md) for the exact checks and limits, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the game-format evidence and font license. The implementation is MIT licensed; the bundled rounded font retains its SIL Open Font License.
+

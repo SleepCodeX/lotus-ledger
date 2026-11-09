@@ -24,12 +24,12 @@ jobs:
           python - <<'PY'
           import hashlib, json, zipfile
           from pathlib import Path
-          path = Path('release-input/lotus-ledger-1.1.0.jar')
-          assert hashlib.sha256(path.read_bytes()).hexdigest() == 'b173b69778736c7f4f4805bd820f27f4d7f583c6ce9c477721724da788b86229'
-          assert 'version=1.1.0' in Path('gradle.properties').read_text().splitlines()
+          path = Path('release-input/lotus-ledger-1.2.0.jar')
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == '9fb29799db6f8787a3aa8cbce8605fa58becf3175c7fe8dd1341081be2d7a625'
+          assert 'version=1.2.0' in Path('gradle.properties').read_text().splitlines()
           with zipfile.ZipFile(path) as archive:
               meta = json.loads(archive.read('fabric.mod.json'))
-              assert meta['id'] == 'lotusledger' and meta['version'] == '1.1.0'
+              assert meta['id'] == 'lotusledger' and meta['version'] == '1.2.0'
               assert meta['depends']['minecraft'] == '~26.2'
               assert 'dev/lotusledger/MenuSynchronizer.class' in archive.namelist()
               assert 'assets/lotusledger/font/lotus-rounded.ttf' in archive.namelist()
@@ -40,32 +40,23 @@ jobs:
       - name: Prepare source and checksums
         run: |
           mkdir -p release-assets
-          cp release-input/lotus-ledger-1.1.0.jar release-assets/
-          git archive --format=zip --prefix=lotus-ledger-1.1.0/ HEAD -o release-assets/lotus-ledger-1.1.0-source.zip
+          cp release-input/lotus-ledger-1.2.0.jar release-assets/
+          git archive --format=zip --prefix=lotus-ledger-1.2.0/ HEAD -o release-assets/lotus-ledger-1.2.0-source.zip
           cd release-assets
-          sha256sum lotus-ledger-1.1.0.jar > lotus-ledger-1.1.0.jar.sha256
-          sha256sum lotus-ledger-1.1.0.jar lotus-ledger-1.1.0-source.zip > SHA256SUMS
+          sha256sum lotus-ledger-1.2.0.jar > lotus-ledger-1.2.0.jar.sha256
+          sha256sum lotus-ledger-1.2.0.jar lotus-ledger-1.2.0-source.zip > SHA256SUMS
       - name: Publish the validated standalone release
         run: |
-          existing=$(gh release view 1.1.0 --json isDraft --jq .isDraft 2>/dev/null || true)
+          existing=$(gh release view 1.2.0 --json isDraft --jq .isDraft 2>/dev/null || true)
           if [ "$existing" = "false" ]; then
-            # Packaging repair only: the released app bytecode must still match this source.
-            changed=$(gh api "repos/$GH_REPO/compare/e2882aafd30d68e9e27dacd0017705b8fc6d9d40...$GITHUB_SHA" --jq '.files[].filename')
-            while IFS= read -r path; do
-              case "$path" in
-                gradlew|.github/workflows/build-and-release.yml|"") ;;
-                *) echo 'App sources changed; bump the release version instead of replacing its source archive.'; exit 1 ;;
-              esac
-            done <<< "$changed"
-            gh release upload 1.1.0 release-assets/lotus-ledger-1.1.0-source.zip release-assets/SHA256SUMS --clobber
-            echo 'Refreshed the buildable source archive; the exact tested jar is unchanged.'
+            echo 'This release is already public; its tested assets remain unchanged.'
             exit 0
           fi
           if [ "$existing" != "true" ]; then
-            gh release create 1.1.0 --draft --target "$GITHUB_SHA" --title 'Lotus Ledger 1.1.0' --notes-file RELEASE_NOTES.md
+            gh release create 1.2.0 --draft --target "$GITHUB_SHA" --title 'Lotus Ledger 1.2.0' --notes-file RELEASE_NOTES.md
           fi
-          gh release upload 1.1.0 release-assets/lotus-ledger-1.1.0.jar release-assets/lotus-ledger-1.1.0-source.zip release-assets/lotus-ledger-1.1.0.jar.sha256 release-assets/SHA256SUMS --clobber
-          gh release edit 1.1.0 --draft=false --prerelease=false --latest --title 'Lotus Ledger 1.1.0' --notes-file RELEASE_NOTES.md
+          gh release upload 1.2.0 release-assets/lotus-ledger-1.2.0.jar release-assets/lotus-ledger-1.2.0-source.zip release-assets/lotus-ledger-1.2.0.jar.sha256 release-assets/SHA256SUMS --clobber
+          gh release edit 1.2.0 --draft=false --prerelease=false --latest --title 'Lotus Ledger 1.2.0' --notes-file RELEASE_NOTES.md
   verify-source:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -85,7 +76,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lotus-ledger-1.1.0-verification
+          name: lotus-ledger-1.2.0-verification
           path: |
             build/test-results/test/*.xml
             build/run/productionClientGameTest/screenshots/*.png
+
