@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "lotusledger-tests",
+  "version": "1.0.0",
+  "name": "Lotus Ledger client checks",
+  "environment": "client",
+  "entrypoints": { "fabric-client-gametest": ["dev.lotusledger.LedgerClientTest"] },
+  "depends": { "lotusledger": "*" }
+}

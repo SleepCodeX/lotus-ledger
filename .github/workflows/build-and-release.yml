@@ -1,0 +1,82 @@
+name: Verify and publish Lotus Ledger
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: lotus-ledger-release
+  cancel-in-progress: false
+jobs:
+  publish-tested-jar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the exact jar tested in Minecraft 26.2
+        run: |
+          python - <<'PY'
+          import hashlib, json, zipfile
+          from pathlib import Path
+          path = Path('release-input/lotus-ledger-1.1.0.jar')
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == 'b173b69778736c7f4f4805bd820f27f4d7f583c6ce9c477721724da788b86229'
+          assert 'version=1.1.0' in Path('gradle.properties').read_text().splitlines()
+          with zipfile.ZipFile(path) as archive:
+              meta = json.loads(archive.read('fabric.mod.json'))
+              assert meta['id'] == 'lotusledger' and meta['version'] == '1.1.0'
+              assert meta['depends']['minecraft'] == '~26.2'
+              assert 'dev/lotusledger/MenuSynchronizer.class' in archive.namelist()
+              assert 'assets/lotusledger/font/lotus-rounded.ttf' in archive.namelist()
+              assert 'assets/lotusledger/NUNITO-OFL.txt' in archive.namelist()
+              assert not any('LedgerClientTest' in name or name.startswith(('at/hannibal2/', 'net/minecraft/', 'net/fabricmc/')) for name in archive.namelist())
+          print('Verified the exact locally tested production jar.')
+          PY
+      - name: Prepare source and checksums
+        run: |
+          mkdir -p release-assets
+          cp release-input/lotus-ledger-1.1.0.jar release-assets/
+          git archive --format=zip --prefix=lotus-ledger-1.1.0/ HEAD -o release-assets/lotus-ledger-1.1.0-source.zip
+          cd release-assets
+          sha256sum lotus-ledger-1.1.0.jar > lotus-ledger-1.1.0.jar.sha256
+          sha256sum lotus-ledger-1.1.0.jar lotus-ledger-1.1.0-source.zip > SHA256SUMS
+      - name: Publish the validated standalone release
+        run: |
+          existing=$(gh release view 1.1.0 --json isDraft --jq .isDraft 2>/dev/null || true)
+          if [ "$existing" = "false" ]; then
+            echo 'Release 1.1.0 is already published; keeping its tested assets unchanged.'
+            exit 0
+          fi
+          if [ "$existing" != "true" ]; then
+            gh release create 1.1.0 --draft --target "$GITHUB_SHA" --title 'Lotus Ledger 1.1.0' --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload 1.1.0 release-assets/lotus-ledger-1.1.0.jar release-assets/lotus-ledger-1.1.0-source.zip release-assets/lotus-ledger-1.1.0.jar.sha256 release-assets/SHA256SUMS --clobber
+          gh release edit 1.1.0 --draft=false --prerelease=false --latest --title 'Lotus Ledger 1.1.0' --notes-file RELEASE_NOTES.md
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and run logic, menu and persistence checks
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+      - name: Independently check the packaged mod in an offline Minecraft client
+        run: xvfb-run -a ./gradlew runProductionClientGameTest --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lotus-ledger-1.1.0-verification
+          path: |
+            build/test-results/test/*.xml
+            build/run/productionClientGameTest/screenshots/*.png

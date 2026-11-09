@@ -1,0 +1,58 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.19.3'
+}
+
+base { archivesName = 'lotus-ledger' }
+repositories { mavenCentral() }
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.3'
+}
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+tasks.withType(JavaCompile).configureEach { options.release = 25 }
+test { useJUnitPlatform() }
+// Disposable client validation; this source set never ships in the production jar.
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'lotusledger-tests'
+        enableGameTests = false
+        enableClientGameTests = true
+    }
+}
+tasks.register('gametestJar', Jar) {
+    archiveClassifier = 'gametest'
+    from sourceSets.gametest.output
+}
+// Loom uses Exec rather than JavaExec here; long cache paths can exceed Windows' command limit.
+abstract class ArgfileClientRun extends net.fabricmc.loom.task.prod.ClientProductionRunTask {
+    @Override protected void configureProgramArgs(org.gradle.process.ExecSpec spec) {
+        super.configureProgramArgs(spec)
+        if (System.getProperty('os.name').startsWith('Windows')) {
+            def argsFile = new File(runDir.get().asFile, 'client-arguments.txt')
+            argsFile.parentFile.mkdirs()
+            argsFile.setText(spec.args.collect { arg ->
+                '"' + arg.toString().replace('\\', '\\\\').replace('"', '\\"') + '"'
+            }.join('\n'), 'UTF-8')
+            spec.setArgs(['@' + argsFile.absolutePath])
+        }
+    }
+}
+tasks.register('runProductionClientGameTest', ArgfileClientRun) {
+    mods.from tasks.named('gametestJar')
+    jvmArgs.add('-Dfabric.client.gametest')
+    runDir = layout.buildDirectory.dir('run/productionClientGameTest')
+}
+processResources {
+    def modVersion = project.version
+    inputs.property 'version', modVersion
+    filesMatching('fabric.mod.json') { expand 'version': modVersion }
+}
+jar { from('LICENSE'); from('THIRD_PARTY_NOTICES.md') }

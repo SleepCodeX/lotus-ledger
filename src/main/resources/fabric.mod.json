@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "lotusledger",
+  "version": "${version}",
+  "name": "Lotus Ledger",
+  "description": "A standalone Trophy Frog collection HUD for Hypixel SkyBlock's Lotus Atoll.",
+  "authors": ["SleepCodeX"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.lotusledger.LotusLedgerClient"] },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.161.0+26.2"
+  },
+  "contact": {
+    "sources": "https://github.com/SleepCodeX/lotus-ledger",
+    "issues": "https://github.com/SleepCodeX/lotus-ledger/issues"
+  }
+}
